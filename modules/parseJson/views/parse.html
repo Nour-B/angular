@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+</head>
+
+<body>
+<script>
+
+
+    var actual_JSON;
+
+    function loadJSON(callback) {
+
+        var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+        xobj.open('GET', 'modules/parseJson/views/inData.json', true); // Replace 'my_data' with the path to your file
+        xobj.onreadystatechange = function () {
+            if (xobj.readyState == 4 && xobj.status == "200") {
+                // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+                callback(xobj.responseText);
+            }
+        };
+        xobj.send(null);
+    }
+
+    function init() {
+        var pres, p = new Promise(res=>pres = res);
+        loadJSON(function(response) {
+            // Parse JSON string into object
+            pres(JSON.parse(response))
+        });
+        return p;
+    }
+
+
+    function extractFromJson(data, filter, ctx)
+    {
+        if(data instanceof Array)
+            return data.map(val=>extractFromJson(val, filter, ctx));
+        var obj = {};
+        for(var i in data) {
+            var c_ctx = filter(i, data[i], ctx)
+            if (c_ctx) {
+                if (typeof(data[i]) == 'object') {
+                    obj[i] = extractFromJson(data[i], filter, c_ctx)
+                }
+                else {
+                    obj[i] = data[i];
+                }
+            }
+        }
+        return obj;
+    }
+
+
+    function D3TreeParse(data, name) {
+        var obj = {name: name,children:[]};
+        if(data instanceof Array){
+            obj.children = data.map(val => D3TreeParse(val, ''));
+            if(data.length == 1) obj.children = obj.children[0].children
+            return obj;
+        }
+        for(var i in data){
+            if(typeof (data[i]) =='object'){
+                obj.children.push(D3TreeParse(data[i], i));
+            }else{
+                obj.children.push({name: i, value: data[i]});
+            }
+        }
+        localStorage.setItem('D3Json',JSON.stringify(obj))
+        return obj;
+    }
+
+
+    treeData = JSON.parse(localStorage.getItem('D3Json'));
+
+    $(document).ready(function () {
+        init().then(actual_JSON =>{
+            data=D3TreeParse(extractFromJson(actual_JSON,
+                (k,v,c)=>c? ['operatorID','id','id_refSite','city_orasId','cityCode','cityName','codeHexacleVoie','modifiedBy','country','createdBy','createdWhen','modifiedWhen','province','provinceCode',"ownerPresenceMandatory",'geographicCoords','geoCodeY','geoCodeZ','geoCodeX','idOrgin','displayName','postalCode','alias','accessLinks','premiseLinks','type','additionalInformation','remarcability','anchorPointValue','anchorPointValueCodeParam','nacelleAccessibilityValue','nacelleAccessibilityValueCodeParam','system','streetNumber','validationLevel','asbestos','comments','fileDate','interventionInstruction','nonCrispLocalisation','status','street','typeCodeParam','name','description','codeHexacleNumero','usageLinks','complexity','number','partiesLinks','operatorName','taoStatus','taoStatusCodeParam','guardianAvailability','interventionNotice','numberOfDeclaredApartments','accessTypeCode','firstName','lastName','role','shortName','specificityOfHabitatCodeParam','totalNbApartments','context','contextCodeParam','interventionAuthorizationCodeParam','statusCodeParam','0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','partyLinks','floorLinks'].indexOf(k) == -1 : ['access','address',"principalAddress", "builts", "premises","parties","usages","floor","staircase","usages"].indexOf(k) != -1
+            ), 'Site');
+
+            var blob = JSON.stringify(data);
+
+            window.alert("nour : "+blob);
+
+            //console.log("nour : "+blob);
+
+
+        });
+    })
+
+
+
+
+</script>
+
+
+<h1>Hello i am the load page </h1>
+
+</body>
